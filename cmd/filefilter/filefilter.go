@@ -7,12 +7,16 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/daszunia/techtask/pkg/logs"
+	"github.com/daszunia/techtask/pkg/monitor"
 	"github.com/daszunia/techtask/pkg/utils"
 )
 
 var (
-	doneChan = make(chan bool, 1)
-	msgChan  = make(chan string)
+	doneChan    = make(chan bool, 1)
+	msgChan     = make(chan string)
+	logHistory  *logs.LogHistory
+	fileMonitor *monitor.MonitorFiles
 )
 
 func main() {
@@ -34,6 +38,11 @@ func main() {
 
 	fmt.Println("Monitoring files in:", *hotDir)
 	fmt.Println("Saving backup to:", *backupDir)
+
+	logHistory = logs.NewLogHistory()
+	fileMonitor = monitor.NewMonitorFiles(logHistory, *hotDir, *backupDir)
+	fileMonitor.StartMonitoring()
+	defer fileMonitor.StopMonitoring()
 
 	waitForExit()
 	readInput()
