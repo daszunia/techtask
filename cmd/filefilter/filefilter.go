@@ -11,14 +11,11 @@ import (
 )
 
 var (
-	doneChan chan bool
-	msgChan  chan string
+	doneChan = make(chan bool, 1)
+	msgChan  = make(chan string)
 )
 
 func main() {
-	doneChan = make(chan bool, 1)
-	msgChan = make(chan string)
-
 	hotDir := flag.String("hot", "", "A path to the folder to be backed up.")
 	backupDir := flag.String("backup", "", "A path to the folder where backups will be saved.")
 	help := flag.Bool("help", false, "Prints help message.")
