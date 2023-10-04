@@ -171,6 +171,12 @@ func (mf *MonitorFiles) HandleBackup(event fsnotify.Event) {
 	}
 
 	mf.logHistory.AddToHistory(timestamp, filepath, operation)
+
+	// renaming the file produces two events - rename for old filename and create for new filename
+	// copy of the old name will fail, so we skip it
+	if event.Op == fsnotify.Rename {
+		return
+	}
 	err := mf.copyFile(filepath)
 	if err != nil {
 		log.Println("error:", err)
@@ -223,6 +229,10 @@ func (mf *MonitorFiles) HandleDelete(event fsnotify.Event) {
 	timestamp := time.Now().Format(time.RFC3339)
 	filepath := event.Name
 	operation := event.Op.String()
+
+	if strings.HasSuffix(filepath, swapSuffix) {
+		return
+	}
 	// log removing original file
 	mf.logHistory.AddToHistory(timestamp, filepath, operation)
 }
