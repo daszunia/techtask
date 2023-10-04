@@ -1,15 +1,30 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
+	"time"
 
 	"github.com/daszunia/techtask/pkg/logs"
 	"github.com/daszunia/techtask/pkg/monitor"
 	"github.com/daszunia/techtask/pkg/utils"
+)
+
+const (
+	helpCmd    = "help"
+	exitCmd    = "exit"
+	logCmd     = "log"
+	viewCmd    = "view"
+	filterCmd  = "filter"
+	nameOpt    = "-name"
+	dateOpt    = "-date"
+	fromPrefix = "from="
+	toPrefix   = "to="
 )
 
 var (
@@ -53,7 +68,16 @@ func waitForExit() {
 				doneChan <- true
 				return
 			case msg := <-msgChan:
-				fmt.Println("Echoing: ", msg)
+				if strings.HasPrefix(msg, helpCmd) {
+					utils.PrintHelp()
+				}
+				if strings.HasPrefix(msg, exitCmd) {
+					doneChan <- true
+					return
+				}
+				if strings.HasPrefix(msg, logCmd) {
+					handleLogView(msg)
+				}
 			}
 		}
 	}()
@@ -61,10 +85,54 @@ func waitForExit() {
 
 func readInput() {
 	go func() {
+		scanner := bufio.NewScanner(os.Stdin)
 		for {
-			var s string
-			fmt.Scanln(&s)
-			msgChan <- s
+			if scanner.Scan() {
+				line := scanner.Text()
+				msgChan <- line
+			}
 		}
 	}()
+}
+
+func handleLogView(msg string) {
+	subcommand := strings.TrimPrefix(msg, logCmd)
+	subcommand = strings.TrimSpace(subcommand)
+	if strings.HasPrefix(subcommand, viewCmd) {
+		logHistory.PrintLog()
+		return
+	}
+
+	if strings.HasPrefix(subcommand, filterCmd) {
+		subcommand2 := strings.TrimPrefix(subcommand, filterCmd)
+		subcommand2 = strings.TrimSpace(subcommand2)
+
+		if strings.HasPrefix(subcommand2, nameOpt) {
+			// Filter by filename regex
+			filterName := strings.TrimPrefix(subcommand2, nameOpt)
+			filterName = strings.TrimSpace(filterName)
+			logHistory.FilterByRegex(filterName)
+
+		} else if strings.HasPrefix(subcommand2, dateOpt) {
+			// Filter by date range
+			options := strings.TrimPrefix(subcommand2, dateOpt)
+			options = strings.TrimSpace(options)
+			optionsList := strings.Split(options, " ")
+
+			from := time.Now().Format(utils.IsoTimeFormat)
+			to := from
+			for _, opt := range optionsList {
+				if strings.Contains(opt, fromPrefix) {
+					from = strings.TrimPrefix(opt, fromPrefix)
+				}
+				if strings.Contains(opt, toPrefix) {
+					to = strings.TrimPrefix(opt, toPrefix)
+				}
+			}
+			logHistory.FilterByDate(from, to)
+
+		} else {
+			fmt.Println("Unknown command")
+		}
+	}
 }

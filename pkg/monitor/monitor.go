@@ -27,7 +27,6 @@ const (
 	swapSuffix         = ".swp"
 	backupSuffix       = ".bak"
 	scheduledRegex     = `delete_(\d{4}-[01]?\d-[0-3]?\dT[0-2]\d:[0-5]\d:[0-5]\d[+-]\d{4})_.*?`
-	isoTimeFormat      = "2006-01-02T15:04:05-0700"
 	backupOp           = "BACKUP"
 	backupDelOp        = "BACKUP_DEL"
 )
@@ -162,7 +161,6 @@ func (mf *MonitorFiles) StopMonitoring() {
 }
 
 func (mf *MonitorFiles) HandleBackup(event fsnotify.Event) {
-	timestamp := time.Now().Format(time.RFC3339)
 	filepath := event.Name
 	operation := event.Op.String()
 
@@ -170,7 +168,7 @@ func (mf *MonitorFiles) HandleBackup(event fsnotify.Event) {
 		return
 	}
 
-	mf.logHistory.AddToHistory(timestamp, filepath, operation)
+	mf.logHistory.AddToHistory(filepath, operation)
 
 	// renaming the file produces two events - rename for old filename and create for new filename
 	// copy of the old name will fail, so we skip it
@@ -195,7 +193,7 @@ func (mf *MonitorFiles) HandlePrefix(event fsnotify.Event) {
 	r := regexp.MustCompile(scheduledRegex)
 	matches := r.FindStringSubmatch(pureFilename)
 	if len(matches) > 1 {
-		scheduleTime, err := time.Parse(isoTimeFormat, matches[1])
+		scheduleTime, err := time.Parse(utils.IsoTimeFormat, matches[1])
 		if err != nil {
 			log.Println("Error parsing date: ", err)
 			return
@@ -226,7 +224,6 @@ func (mf *MonitorFiles) HandlePrefix(event fsnotify.Event) {
 }
 
 func (mf *MonitorFiles) HandleDelete(event fsnotify.Event) {
-	timestamp := time.Now().Format(time.RFC3339)
 	filepath := event.Name
 	operation := event.Op.String()
 
@@ -234,7 +231,7 @@ func (mf *MonitorFiles) HandleDelete(event fsnotify.Event) {
 		return
 	}
 	// log removing original file
-	mf.logHistory.AddToHistory(timestamp, filepath, operation)
+	mf.logHistory.AddToHistory(filepath, operation)
 }
 
 func (mf *MonitorFiles) copyFile(sourceFile string) error {
@@ -262,7 +259,7 @@ func (mf *MonitorFiles) copyFile(sourceFile string) error {
 
 	_, err = io.Copy(destination, source)
 
-	mf.logHistory.AddToHistory(time.Now().Format(time.RFC3339), destFile, backupOp)
+	mf.logHistory.AddToHistory(destFile, backupOp)
 	return err
 }
 
@@ -285,7 +282,7 @@ func (mf *MonitorFiles) deleteFile(sourceFile string, withTimestamp bool, isotim
 	}
 
 	// log deleting backup
-	mf.logHistory.AddToHistory(time.Now().Format(time.RFC3339), backupFileName, backupDelOp)
+	mf.logHistory.AddToHistory(backupFileName, backupDelOp)
 	return nil
 }
 
