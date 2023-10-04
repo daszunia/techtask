@@ -21,7 +21,7 @@ var (
 
 func main() {
 	hotDir := flag.String("hot", "", "A path to the folder to be backed up.")
-	backupDir := flag.String("backup", "", "A path to the folder where backups will be saved.")
+	backupDir := flag.String("backup", "", "A path to the folder where backups will be saved (optional).")
 	help := flag.Bool("help", false, "Prints help message.")
 	flag.Parse()
 
@@ -29,15 +29,6 @@ func main() {
 		utils.PrintHelp()
 		return
 	}
-
-	err := utils.ValidateFolders(*hotDir, *backupDir)
-	if err != nil {
-		fmt.Println("Error validating folders: ", err)
-		return
-	}
-
-	fmt.Println("Monitoring files in:", *hotDir)
-	fmt.Println("Saving backup to:", *backupDir)
 
 	logHistory = logs.NewLogHistory()
 	fileMonitor = monitor.NewMonitorFiles(logHistory, *hotDir, *backupDir)
